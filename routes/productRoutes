@@ -1,0 +1,100 @@
+const express = require('express');
+const router = express.Router();
+const Product = require('../models/product.js');
+
+//get all products
+router.get('/products', async (req, res) => {
+        try {
+                const products = await Product.find()
+                res.json(products);
+        } catch (error){
+                res.status(500).json({error: error.message});
+        }
+});
+
+//get product by id
+router.get('/products/:productID', async (req, res) => {
+        const productID = req.params.productID;
+        const products = await Product.find();
+        res.json({product: products[productID]});
+});
+
+//add new product
+router.post('/products', async (req, res) => {
+        const product = new Product({
+                _id: req.body._id,
+                name: req.body.name,
+                description: req.body.description,
+                price:  req.body.price,
+                quantity: req.body.quantity,
+                category: req.body.category
+        });
+        const newProduct = await product.save();
+        res.status(201).json(newProduct);
+});
+
+//update by id
+router.put('/products/:productID', async (req, res) => {
+        const productID = req.params.productID;
+        const updatedProduct = {
+                name: req.body.name,
+                description: req.body.description,
+                price:req.body.price,
+                quantity: req.body.quantity,
+                category: req.body.category
+        };
+        try {
+                const product = await Product.findByIdAndUpdate(productID, updatedProduct, {new: true});
+                if (!product){
+                        return res.status(404).json({message: 'Product not found'});
+                }
+                //for troubleshooting
+                res.json(product);
+        }catch (error){
+                res.status(500).json({message: error.message})
+        }
+});
+
+//delete by id
+router.delete('/products/:productID', async (req, res) => {
+        const productId = req.params.productID;
+        try {
+                const deletedProduct = await Product.findByIdAndDelete(productId);
+                if(!deletedProduct){
+                        return res.status(404).json({error: "product not found"});
+                }
+                res.json({message:"delete successful"})
+        } catch(error){
+                res.status(500).json({error:"server error"});
+        }
+});
+
+//delete all
+router.delete('/products', async (req, res) => {
+        try {
+                const deleteAll = await Product.deleteMany({});
+                res.status(200).json({ message: `Deleted all products` });
+        } catch (error){
+                res.status(500).json({error: "server error"});
+        }
+});
+
+//search by string
+router.get('/search', async (req, res) => {
+        const searchName = req.query.name;
+        try {
+                if(!searchName){
+                        return res.status(400).json({error: "name is invalid"});
+                }
+                const regex = new RegExp(searchName, 'i');
+                const results = await Product.find({name: regex});
+                if (results.length === 0){
+                        return res.status(404).json({message: 'no matches'})
+                }
+                res.json(results);
+        } catch (error){
+                res.status(500).json({ error: error.message});
+        }
+});
+
+module.exports = router;    
